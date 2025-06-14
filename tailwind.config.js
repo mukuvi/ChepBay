@@ -7,6 +7,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        background: '#ffffff',
+        foreground: '#1f2937',
         border: {
           DEFAULT: '#e5e7eb',
         },
