@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import { mockProducts } from '../lib/mockData'
 
 export const useProducts = (filters = {}) => {
   const [products, setProducts] = useState([])
@@ -10,44 +10,38 @@ export const useProducts = (filters = {}) => {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          profiles:seller_id (
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('is_available', true)
-        .order('created_at', { ascending: false })
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      let filteredProducts = [...mockProducts]
 
       // Apply filters
       if (filters.category) {
-        query = query.eq('category', filters.category)
+        filteredProducts = filteredProducts.filter(p => p.category === filters.category)
       }
       
       if (filters.condition) {
-        query = query.eq('condition', filters.condition)
+        filteredProducts = filteredProducts.filter(p => p.condition === filters.condition)
       }
       
       if (filters.minPrice) {
-        query = query.gte('price', filters.minPrice)
+        filteredProducts = filteredProducts.filter(p => p.price >= filters.minPrice)
       }
       
       if (filters.maxPrice) {
-        query = query.lte('price', filters.maxPrice)
+        filteredProducts = filteredProducts.filter(p => p.price <= filters.maxPrice)
       }
       
       if (filters.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+        const searchTerm = filters.search.toLowerCase()
+        filteredProducts = filteredProducts.filter(p => 
+          p.title.toLowerCase().includes(searchTerm) || 
+          p.description.toLowerCase().includes(searchTerm)
+        )
       }
 
-      const { data, error } = await query
-
-      if (error) throw error
-
-      setProducts(data || [])
+      setProducts(filteredProducts)
       setError(null)
     } catch (err) {
       setError(err.message)
@@ -63,57 +57,56 @@ export const useProducts = (filters = {}) => {
 
   const createProduct = async (productData) => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert([productData])
-        .select()
-        .single()
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      const newProduct = {
+        ...productData,
+        id: Date.now().toString(),
+        created_at: new Date().toISOString(),
+        is_available: true,
+        profiles: {
+          full_name: 'Current User',
+          avatar_url: null
+        }
+      }
 
-      if (error) throw error
-
+      setProducts(prev => [newProduct, ...prev])
       toast.success('Product listed successfully!')
-      await fetchProducts()
-      return { data, error: null }
+      return { data: newProduct, error: null }
     } catch (err) {
-      toast.error(err.message)
+      toast.error('Failed to create product')
       return { data: null, error: err }
     }
   }
 
   const updateProduct = async (id, updates) => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      setProducts(prev => prev.map(p => 
+        p.id === id ? { ...p, ...updates } : p
+      ))
+      
       toast.success('Product updated successfully!')
-      await fetchProducts()
-      return { data, error: null }
+      return { data: updates, error: null }
     } catch (err) {
-      toast.error(err.message)
+      toast.error('Failed to update product')
       return { data: null, error: err }
     }
   }
 
   const deleteProduct = async (id) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      setProducts(prev => prev.filter(p => p.id !== id))
       toast.success('Product deleted successfully!')
-      await fetchProducts()
       return { error: null }
     } catch (err) {
-      toast.error(err.message)
+      toast.error('Failed to delete product')
       return { error: err }
     }
   }

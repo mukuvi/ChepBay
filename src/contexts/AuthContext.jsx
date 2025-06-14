@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import React, { createContext, useContext, useState } from 'react'
 import toast from 'react-hot-toast'
+import { mockUser } from '../lib/mockData'
 
 const AuthContext = createContext({})
 
@@ -15,165 +15,93 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      }
-      
-      setLoading(false)
-    }
-
-    getSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
-        }
-        
-        setLoading(false)
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error && error.code !== 'PGRST116') {
-        throw error
-      }
-
-      setProfile(data)
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-    }
-  }
+  const [loading, setLoading] = useState(false)
 
   const signUp = async (email, password, userData) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      setLoading(true)
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      const newUser = {
+        id: Date.now().toString(),
         email,
-        password,
-        options: {
-          data: userData
-        }
-      })
-
-      if (error) throw error
-
-      if (data.user) {
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email,
-              full_name: userData.full_name,
-              phone_number: userData.phone_number,
-              is_admin: false
-            }
-          ])
-
-        if (profileError) throw profileError
-        
-        toast.success('Account created successfully!')
+        ...userData
       }
-
-      return { data, error: null }
+      
+      setUser(newUser)
+      setProfile(newUser)
+      
+      toast.success('Account created successfully!')
+      return { data: { user: newUser }, error: null }
     } catch (error) {
-      toast.error(error.message)
+      toast.error('Failed to create account')
       return { data: null, error }
+    } finally {
+      setLoading(false)
     }
   }
 
   const signIn = async (email, password) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
-      if (error) throw error
-
+      setLoading(true)
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // For demo purposes, always sign in as mock user
+      setUser(mockUser)
+      setProfile(mockUser)
+      
       toast.success('Signed in successfully!')
-      return { data, error: null }
+      return { data: { user: mockUser }, error: null }
     } catch (error) {
-      toast.error(error.message)
+      toast.error('Failed to sign in')
       return { data: null, error }
+    } finally {
+      setLoading(false)
     }
   }
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      
       setUser(null)
       setProfile(null)
       toast.success('Signed out successfully!')
     } catch (error) {
-      toast.error(error.message)
+      toast.error('Failed to sign out')
     }
   }
 
   const updateProfile = async (updates) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
-
-      if (error) throw error
-
-      await fetchProfile(user.id)
+      const updatedProfile = { ...profile, ...updates }
+      setProfile(updatedProfile)
+      setUser(updatedProfile)
+      
       toast.success('Profile updated successfully!')
       return { error: null }
     } catch (error) {
-      toast.error(error.message)
+      toast.error('Failed to update profile')
       return { error }
     }
   }
 
   const deleteAccount = async () => {
     try {
-      // Delete profile first
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id)
-
-      if (profileError) throw profileError
-
-      // Delete auth user (this requires admin privileges)
-      // In production, this should be handled by an edge function
       await signOut()
-      
       toast.success('Account deleted successfully!')
       return { error: null }
     } catch (error) {
-      toast.error(error.message)
+      toast.error('Failed to delete account')
       return { error }
     }
+  }
+
+  const fetchProfile = async (userId) => {
+    // Mock implementation - in real app this would fetch from database
+    return profile
   }
 
   const value = {

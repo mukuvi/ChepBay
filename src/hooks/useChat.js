@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
+import { mockConversations, mockMessages } from '../lib/mockData'
 
 export const useChat = () => {
   const { user } = useAuth()
@@ -13,20 +13,10 @@ export const useChat = () => {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          buyer:buyer_id (full_name, avatar_url),
-          seller:seller_id (full_name, avatar_url),
-          product:product_id (title, images)
-        `)
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-        .order('updated_at', { ascending: false })
-
-      if (error) throw error
-
-      setConversations(data || [])
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      setConversations(mockConversations)
     } catch (err) {
       console.error('Error fetching conversations:', err)
     }
@@ -34,18 +24,14 @@ export const useChat = () => {
 
   const fetchMessages = async (conversationId) => {
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          sender:sender_id (full_name, avatar_url)
-        `)
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-
-      setMessages(data || [])
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      const conversationMessages = mockMessages.filter(
+        msg => msg.conversation_id === conversationId
+      )
+      
+      setMessages(conversationMessages)
     } catch (err) {
       console.error('Error fetching messages:', err)
     }
@@ -56,35 +42,28 @@ export const useChat = () => {
 
     try {
       // Check if conversation already exists
-      const { data: existing } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('product_id', productId)
-        .eq('buyer_id', user.id)
-        .eq('seller_id', sellerId)
-        .single()
+      const existing = conversations.find(conv => 
+        conv.product_id === productId && 
+        conv.buyer_id === user.id && 
+        conv.seller_id === sellerId
+      )
 
       if (existing) {
         return existing.id
       }
 
       // Create new conversation
-      const { data, error } = await supabase
-        .from('conversations')
-        .insert([
-          {
-            product_id: productId,
-            buyer_id: user.id,
-            seller_id: sellerId
-          }
-        ])
-        .select()
-        .single()
+      const newConversation = {
+        id: Date.now().toString(),
+        product_id: productId,
+        buyer_id: user.id,
+        seller_id: sellerId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
 
-      if (error) throw error
-
-      await fetchConversations()
-      return data.id
+      setConversations(prev => [newConversation, ...prev])
+      return newConversation.id
     } catch (err) {
       toast.error('Failed to start conversation')
       return null
@@ -95,28 +74,23 @@ export const useChat = () => {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .insert([
-          {
-            conversation_id: conversationId,
-            sender_id: user.id,
-            content
-          }
-        ])
-        .select()
-        .single()
+      const newMessage = {
+        id: Date.now().toString(),
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content,
+        created_at: new Date().toISOString(),
+        sender: user
+      }
 
-      if (error) throw error
-
+      setMessages(prev => [...prev, newMessage])
+      
       // Update conversation timestamp
-      await supabase
-        .from('conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', conversationId)
-
-      await fetchMessages(conversationId)
-      await fetchConversations()
+      setConversations(prev => prev.map(conv => 
+        conv.id === conversationId 
+          ? { ...conv, updated_at: new Date().toISOString() }
+          : conv
+      ))
     } catch (err) {
       toast.error('Failed to send message')
     }
@@ -126,44 +100,6 @@ export const useChat = () => {
     if (user) {
       fetchConversations()
       setLoading(false)
-    }
-  }, [user])
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    if (!user) return
-
-    const messagesSubscription = supabase
-      .channel('messages')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages' 
-        }, 
-        (payload) => {
-          setMessages(prev => [...prev, payload.new])
-        }
-      )
-      .subscribe()
-
-    const conversationsSubscription = supabase
-      .channel('conversations')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'conversations' 
-        }, 
-        () => {
-          fetchConversations()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      messagesSubscription.unsubscribe()
-      conversationsSubscription.unsubscribe()
     }
   }, [user])
 
