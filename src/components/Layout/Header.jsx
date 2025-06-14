@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useCart } from '../../contexts/CartContext'
 import { 
   Search, 
   ShoppingBag, 
@@ -10,20 +11,33 @@ import {
   Settings,
   Plus,
   Menu,
-  X
+  X,
+  ShoppingCart
 } from 'lucide-react'
 
 const Header = () => {
   const { user, profile, signOut } = useAuth()
+  const { getTotalItems } = useCart()
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/')
     setIsProfileMenuOpen(false)
   }
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchQuery('')
+    }
+  }
+
+  const totalCartItems = getTotalItems()
 
   return (
     <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
@@ -39,19 +53,16 @@ const Header = () => {
 
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-lg mx-8">
-            <div className="relative w-full">
+            <form onSubmit={handleSearch} className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type="text"
                 placeholder="Search for products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    navigate(`/search?q=${encodeURIComponent(e.target.value.trim())}`)
-                  }
-                }}
               />
-            </div>
+            </form>
           </div>
 
           {/* Desktop Navigation */}
@@ -64,6 +75,18 @@ const Header = () => {
                 >
                   <Plus className="h-4 w-4" />
                   <span>Sell</span>
+                </Link>
+                
+                <Link
+                  to="/cart"
+                  className="p-2 text-gray-600 hover:text-primary-600 transition-colors relative"
+                >
+                  <ShoppingCart className="h-6 w-6" />
+                  {totalCartItems > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {totalCartItems}
+                    </span>
+                  )}
                 </Link>
                 
                 <Link
@@ -172,19 +195,16 @@ const Header = () => {
 
         {/* Mobile Search */}
         <div className="md:hidden pb-4">
-          <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
               placeholder="Search for products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && e.target.value.trim()) {
-                  navigate(`/search?q=${encodeURIComponent(e.target.value.trim())}`)
-                }
-              }}
             />
-          </div>
+          </form>
         </div>
 
         {/* Mobile Menu */}
@@ -199,6 +219,14 @@ const Header = () => {
                 >
                   <Plus className="h-5 w-5" />
                   <span>Sell Product</span>
+                </Link>
+                <Link
+                  to="/cart"
+                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  <span>Cart ({totalCartItems})</span>
                 </Link>
                 <Link
                   to="/messages"

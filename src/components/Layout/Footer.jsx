@@ -98,15 +98,15 @@ const Footer = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-300">
             <div className="flex items-center space-x-2">
               <Mail className="h-4 w-4" />
-              <span>support@chepbay.com</span>
+              <span>support@chepbay.co.ke</span>
             </div>
             <div className="flex items-center space-x-2">
               <Phone className="h-4 w-4" />
-              <span>+234 (0) 123 456 7890</span>
+              <span>+254 (0) 712 345 678</span>
             </div>
             <div className="flex items-center space-x-2">
               <MapPin className="h-4 w-4" />
-              <span>University Campus, Nigeria</span>
+              <span>University Campus, Kenya</span>
             </div>
           </div>
         </div>

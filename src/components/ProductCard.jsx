@@ -1,13 +1,16 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Heart, MapPin, Clock } from 'lucide-react'
+import { useCart } from '../contexts/CartContext'
+import { Heart, MapPin, Clock, ShoppingCart } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, viewMode = 'grid' }) => {
+  const { addToCart } = useCart()
+
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-NG', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'NGN',
+      currency: 'KES',
       minimumFractionDigits: 0,
     }).format(price)
   }
@@ -33,6 +36,86 @@ const ProductCard = ({ product }) => {
     return condition.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
   }
 
+  const handleAddToCart = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    addToCart(product)
+  }
+
+  if (viewMode === 'list') {
+    return (
+      <div className="card hover:shadow-lg transition-shadow duration-300">
+        <div className="flex">
+          <Link to={`/product/${product.id}`} className="flex-shrink-0">
+            <div className="w-48 h-32 bg-gray-200 overflow-hidden">
+              {product.images && product.images.length > 0 ? (
+                <img
+                  src={product.images[0]}
+                  alt={product.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                  <span className="text-gray-500">No Image</span>
+                </div>
+              )}
+            </div>
+          </Link>
+          
+          <div className="flex-1 p-4">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <Link to={`/product/${product.id}`}>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-primary-600 transition-colors">
+                    {product.title}
+                  </h3>
+                </Link>
+
+                <p className="text-2xl font-bold text-primary-600 mb-2">
+                  {formatPrice(product.price)}
+                </p>
+
+                <p className="text-gray-600 text-sm mb-3">
+                  {product.description}
+                </p>
+
+                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>{product.location || 'Campus'}</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{formatDistanceToNow(new Date(product.created_at), { addSuffix: true })}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end space-y-2 ml-4">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getConditionColor(product.condition)}`}>
+                  {formatCondition(product.condition)}
+                </span>
+                
+                <div className="flex space-x-2">
+                  <button className="p-2 text-gray-600 hover:text-red-500 transition-colors">
+                    <Heart className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={handleAddToCart}
+                    className="p-2 text-gray-600 hover:text-primary-600 transition-colors"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="card card-hover group">
       <div className="relative">
@@ -52,10 +135,18 @@ const ProductCard = ({ product }) => {
           </div>
         </Link>
         
-        {/* Favorite Button */}
-        <button className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors">
-          <Heart className="h-4 w-4 text-gray-600 hover:text-red-500" />
-        </button>
+        {/* Action Buttons */}
+        <div className="absolute top-2 right-2 flex space-x-1">
+          <button className="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors">
+            <Heart className="h-4 w-4 text-gray-600 hover:text-red-500" />
+          </button>
+          <button
+            onClick={handleAddToCart}
+            className="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors"
+          >
+            <ShoppingCart className="h-4 w-4 text-gray-600 hover:text-primary-600" />
+          </button>
+        </div>
 
         {/* Condition Badge */}
         <div className="absolute top-2 left-2">
